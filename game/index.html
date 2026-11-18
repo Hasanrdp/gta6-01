@@ -3,191 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Velmora Bay — Open-World Crime</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ffd233'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3EV%3C/text%3E%3C/svg%3E">
+<title>Velmora Bay 3D — Open-World Crime</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1216;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #f2f2f2; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a0f14; font-family: 'Segoe UI', system-ui, sans-serif; }
   #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  .hud { position: fixed; z-index: 5; pointer-events: none; user-select: none; }
-
-  /* Top-left: health + cash */
-  #topleft { top: 16px; left: 16px; }
-  #health-bar { width: 220px; height: 14px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35);
-    border-radius: 7px; overflow: hidden; }
-  #health-fill { height: 100%; width: 100%; background: #58c96b; transition: width .2s; }
-  #health-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-weight: 700;
-    text-shadow: 0 1px 3px #000; font-size: 13px; }
-  #cash { margin-top: 6px; font-size: 26px; font-weight: 800; color: #7dff9a;
-    text-shadow: 0 2px 4px #000; letter-spacing: .5px; }
-  #ammo { margin-top: 2px; font-size: 13px; font-weight: 700; color: #ffd94a; text-shadow: 0 1px 3px #000; }
-
-  /* Top-right: wanted stars + clock */
-  #topright { top: 16px; right: 16px; text-align: right; }
-  #stars { font-size: 26px; letter-spacing: 3px; color: #ffd94a; text-shadow: 0 0 8px rgba(0,0,0,.9); }
-  #stars.hot { color: #ff5340; animation: pulse .5s infinite alternate; }
-  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
-  #clock { font-size: 22px; font-weight: 800; text-shadow: 0 2px 4px #000; }
-  #day { font-size: 12px; font-weight: 700; color: #cfe3f2; text-shadow: 0 1px 3px #000; }
-
-  /* Top-centre: mission objective card */
-  #objective-card { top: 14px; left: 50%; transform: translateX(-50%); width: 460px; max-width: 46vw;
-    background: rgba(8, 14, 18, .72); border: 1px solid rgba(255, 210, 51, .55); border-radius: 8px;
-    padding: 9px 14px; text-align: center; }
-  #objective-card.pop { animation: pop .35s ease; }
-  @keyframes pop { 0% { transform: translateX(-50%) scale(.94); } 100% { transform: translateX(-50%) scale(1); } }
-  #obj-title { font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #ffd233; }
-  #obj-text { font-size: 15px; font-weight: 600; margin-top: 2px; }
-  #obj-meta { font-size: 12px; color: #bfe3ff; margin-top: 2px; font-weight: 600; }
-
-  /* Bottom-left: speed + controls hint */
-  #bottomleft { bottom: 16px; left: 16px; }
-  #speed { font-size: 34px; font-weight: 800; text-shadow: 0 2px 5px #000; }
-  #menu-hint { font-size: 12px; color: #dfe9f2; text-shadow: 0 1px 3px #000; margin-top: 2px; }
-
-  /* Bottom-right: minimap */
-  #minimap-wrap { bottom: 16px; right: 16px; }
-  #minimap { width: 220px; height: 220px; border: 2px solid rgba(255,255,255,.5); border-radius: 6px;
-    box-shadow: 0 4px 18px rgba(0,0,0,.5); background: #10161a; }
-  #map-label { text-align: right; font-size: 11px; font-weight: 800; letter-spacing: 2px;
-    color: #fff; text-shadow: 0 1px 3px #000; margin-top: 3px; }
-
-  /* Centre: crosshair, prompt, toast */
-  #crosshair { top: 50%; left: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
-    border: 2px solid rgba(255,255,255,.9); border-radius: 50%; display: none; }
-  #prompt { bottom: 22%; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 700;
-    background: rgba(0,0,0,.65); border: 1px solid rgba(255,255,255,.4); border-radius: 6px;
-    padding: 8px 16px; display: none; white-space: nowrap; }
-  #toast { top: 118px; left: 50%; transform: translateX(-50%); width: 620px; max-width: 70vw;
-    text-align: center; font-size: 15px; font-weight: 600; line-height: 1.45;
-    background: rgba(8, 14, 18, .78); border-radius: 8px; padding: 10px 16px;
-    opacity: 0; transition: opacity .4s; }
-
-  /* Hurt flash */
-  #hurt-flash { position: fixed; inset: 0; z-index: 4; pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 55%, rgba(255,0,0,.55) 100%);
-    opacity: 0; transition: opacity .15s; }
-
-  /* Full-screen menus */
-  .screen { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center;
-    flex-direction: column; text-align: center; background: rgba(6, 12, 16, .72); backdrop-filter: blur(3px); }
-  .screen h1 { font-size: 64px; margin: 0; letter-spacing: 6px; font-weight: 900;
-    background: linear-gradient(180deg, #ffe9a8, #ff9a3d); -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; text-shadow: 0 4px 24px rgba(0,0,0,.4); }
-  .screen h2 { font-size: 15px; letter-spacing: 4px; color: #9fd8ff; margin: 6px 0 18px; font-weight: 700; }
-  .screen p.story { max-width: 560px; font-size: 15px; line-height: 1.6; color: #e8eef2; margin: 0 0 18px; }
-  .controls { display: grid; grid-template-columns: auto auto; gap: 4px 18px; text-align: left;
-    font-size: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18);
-    border-radius: 8px; padding: 14px 20px; margin-bottom: 22px; }
-  .controls b { color: #ffd233; }
-  .btn { pointer-events: auto; cursor: pointer; font-size: 18px; font-weight: 800; letter-spacing: 1px;
-    color: #10161a; background: #ffd233; border: none; border-radius: 8px; padding: 13px 34px; margin: 4px; }
-  .btn:hover { background: #ffe066; }
-  .btn.ghost { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.6); }
-  .btn.ghost:hover { background: rgba(255,255,255,.12); }
-  #save-state { font-size: 12px; color: #9fb6c4; margin-top: 10px; }
-  .big-word { font-size: 84px; font-weight: 900; letter-spacing: 10px; margin: 0; }
-  #busted-screen .big-word { color: #5aa2ff; text-shadow: 0 0 40px rgba(90,162,255,.6); }
-  #wasted-screen .big-word { color: #ff5340; text-shadow: 0 0 40px rgba(255,83,64,.6); }
-  #complete-screen .big-word { color: #7dff9a; font-size: 54px; letter-spacing: 4px; }
-  .detail { font-size: 16px; color: #dfe9f2; margin: 10px 0 22px; max-width: 520px; line-height: 1.5; }
-  #mute-btn { position: fixed; z-index: 6; top: 122px; right: 16px; pointer-events: auto; cursor: pointer;
-    background: rgba(0,0,0,.55); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 6px;
-    padding: 6px 10px; font-size: 12px; font-weight: 700; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hud { position: fixed; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); pointer-events: none; z-index: 5; }
+  #hud-topleft { top: 14px; left: 16px; font-size: 20px; font-weight: 700; }
+  #hud-healthbar { width: 190px; height: 10px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.5); margin-top: 6px; }
+  #hud-health { height: 100%; width: 100%; background: #22c55e; }
+  #hud-topright { top: 14px; right: 16px; text-align: right; font-size: 20px; }
+  #hud-stars { font-size: 24px; letter-spacing: 2px; }
+  #hud-mission { font-size: 14px; opacity: .9; margin-top: 4px; }
+  #hud-objective { bottom: 118px; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 600; background: rgba(0,0,0,.5); padding: 8px 16px; border-radius: 6px; white-space: nowrap; }
+  #hud-bottomright { bottom: 16px; right: 16px; text-align: right; font-size: 15px; }
+  #hud-speed { font-size: 26px; font-weight: 700; }
+  #hud-radio { color: #fbbf24; font-size: 13px; margin-top: 2px; }
+  #hud-armed { font-size: 13px; opacity: .85; margin-top: 2px; }
+  #hud-banner { top: 22%; left: 50%; transform: translateX(-50%); font-size: 30px; font-weight: 800; color: #facc15; text-align: center; transition: opacity .4s; white-space: nowrap; }
+  #hud-screen { top: 46%; left: 50%; transform: translate(-50%,-50%); font-size: 22px; font-weight: 700; text-align: center; }
+  #hud-title { top: 12%; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+  #hud-title h1 { margin: 0; font-size: 56px; letter-spacing: 4px; color: #facc15; text-shadow: 0 2px 0 #7f1d1d, 0 4px 18px rgba(0,0,0,.7); }
+  #hud-title p { margin: 6px 0 0; font-size: 17px; color: #fff; }
+  #hud-title .keys { font-size: 13px; opacity: .85; margin-top: 14px; line-height: 1.7; }
+  #minimap { position: fixed; left: 16px; bottom: 16px; width: 180px; height: 180px; border: 2px solid rgba(255,255,255,.45); border-radius: 50%; z-index: 5; pointer-events: none; }
+  #hud-flash { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(220,0,0,.55) 100%); opacity: 0; pointer-events: none; z-index: 4; }
 </style>
-<script type="importmap">
-{ "imports": { "three": "./vendor/three.min.js" } }
-</script>
 </head>
 <body>
-<canvas id="game" aria-label="Velmora Bay: an open-world crime game"></canvas>
-<div id="hurt-flash"></div>
-
-<div class="hud" id="topleft">
-  <div id="health-bar"><div id="health-fill"></div></div>
-  <div id="health-row">❤ <span id="health-text">100</span></div>
-  <div id="cash">$ 250</div>
-  <div id="ammo">AMMO 24</div>
-</div>
-
-<div class="hud" id="topright">
-  <div id="stars">☆☆☆☆☆</div>
-  <div id="clock">08:00</div>
-  <div id="day">DAY 1</div>
-</div>
-
-<div class="hud" id="objective-card">
-  <div id="obj-title">VELMORA BAY</div>
-  <div id="obj-text">Press START and meet Vera Kade.</div>
-  <div id="obj-meta"></div>
-</div>
-
-<div class="hud" id="bottomleft">
-  <div id="speed"></div>
-  <div id="menu-hint">WASD move &amp; drive · E enter / steal car · F punch · Click shoot · P pause · M mute</div>
-</div>
-
-<div class="hud" id="minimap-wrap">
-  <canvas id="minimap" width="220" height="220"></canvas>
-  <div id="map-label">VELMORA BAY</div>
-</div>
-
-<div class="hud" id="crosshair"></div>
-<div class="hud" id="prompt"></div>
-<div class="hud" id="toast"></div>
-<button id="mute-btn">🔊 Sound on</button>
-
-<div class="screen" id="start-screen">
-  <h1>VELMORA BAY</h1>
-  <h2>AN OPEN-WORLD CRIME STORY</h2>
-  <p class="story">Rook Marlow came back to Velmora Bay with $250, a borrowed jacket and a
-    debt to the Kade crew. Three jobs stand between him and a clean slate — if the
-    Velmora PD doesn't catch him first. Steal cars, lose the cops, run the jobs.</p>
-  <div class="controls">
-    <span><b>W A S D</b></span><span>Move on foot / drive</span>
-    <span><b>Mouse</b></span><span>Look around · Click to shoot</span>
-    <span><b>E</b></span><span>Enter car · steal car · grab package</span>
-    <span><b>F</b></span><span>Punch</span>
-    <span><b>Shift</b></span><span>Run</span>
-    <span><b>P / Esc</b></span><span>Pause</span>
-    <span><b>R</b></span><span>Retry a failed job</span>
-    <span><b>M</b></span><span>Mute</span>
-  </div>
-  <div>
-    <button class="btn" id="start-btn">▶ START THE STORY</button>
-    <button class="btn ghost" id="continue-btn">CONTINUE — LOAD SAVE</button>
-  </div>
-  <div id="save-state"></div>
-</div>
-
-<div class="screen" id="pause-screen">
-  <h1 style="font-size:44px">PAUSED</h1>
-  <p class="story">Velmora Bay waits for no one — except right now.</p>
-  <div>
-    <button class="btn" id="resume-btn">RESUME</button>
-    <button class="btn ghost" id="save-btn">SAVE GAME</button>
-    <button class="btn ghost" id="restart-btn">RESTART</button>
-  </div>
-</div>
-
-<div class="screen" id="busted-screen">
-  <p class="big-word">BUSTED</p>
-  <p class="detail" id="busted-detail"></p>
-  <button class="btn" id="busted-btn">WALK FREE — RESPAWN</button>
-</div>
-
-<div class="screen" id="wasted-screen">
-  <p class="big-word">WASTED</p>
-  <p class="detail" id="wasted-detail"></p>
-  <button class="btn" id="wasted-btn">WAKE UP — RESPAWN</button>
-</div>
-
-<div class="screen" id="complete-screen">
-  <p class="big-word">CHAPTER COMPLETE</p>
-  <p class="detail" id="complete-detail"></p>
-  <button class="btn" id="complete-btn">KEEP ROAMING VELMORA BAY</button>
-</div>
-
+<canvas id="game" aria-label="Velmora Bay 3D: an open-world crime game. Drive, steal cars, dodge the police and finish Mara's five jobs."></canvas>
+<canvas id="minimap" width="180" height="180" aria-hidden="true"></canvas>
+<div id="hud-topleft" class="hud"><span id="hud-cash">$0</span><div id="hud-healthbar"><div id="hud-health"></div></div></div>
+<div id="hud-topright" class="hud"><div id="hud-stars">☆☆☆☆☆</div><div id="hud-mission"></div></div>
+<div id="hud-objective" class="hud"></div>
+<div id="hud-bottomright" class="hud"><div id="hud-speed"></div><div id="hud-radio"></div><div id="hud-armed"></div></div>
+<div id="hud-banner" class="hud"></div>
+<div id="hud-screen" class="hud"></div>
+<div id="hud-title" class="hud"><h1>VELMORA BAY</h1><p>An open-world crime story — five jobs, one city, no mercy.</p><p class="keys">WASD move / drive &nbsp;·&nbsp; Shift sprint &nbsp;·&nbsp; E enter car / interact &nbsp;·&nbsp; F punch &nbsp;·&nbsp; Click shoot (after Job 1)<br>Space handbrake &nbsp;·&nbsp; R radio &nbsp;·&nbsp; M mute &nbsp;·&nbsp; P pause &nbsp;·&nbsp; Drag mouse to look around</p></div>
+<div id="hud-flash"></div>
+<p id="status" role="status" aria-live="polite"></p>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
